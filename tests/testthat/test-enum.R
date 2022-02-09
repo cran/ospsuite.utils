@@ -1,6 +1,14 @@
 test_that("It creates an enum from keys only", {
+  # both vectors and lists are fine
   myEnum <- enum(c("Red", "Blue", "Green"))
+  myEnum2 <- enum(list("Red", "Blue", "Green"))
+
+  # empty strings are not an issue
+  myEnum3 <- enum(c("Diamond", "", "Circle"))
+
   expect_equal(names(myEnum), c("Red", "Blue", "Green"))
+  expect_equal(myEnum, myEnum2)
+  expect_equal(names(myEnum3), c("Diamond", "", "Circle"))
 })
 
 test_that("It creates an enum from keys and values", {
@@ -12,15 +20,15 @@ test_that("It throws an error when not all values are provided", {
   expect_error(myEnum <- enum(c(Diamond = 1, 2, Circle = 2)), regexp = messages$errorEnumNotAllNames)
 })
 
-test_that("getEnumKey returns the correct key", {
+test_that("enumGetKey returns the correct key", {
   myEnum <- enum(c(Diamond = 1, Triangle = 2, Circle = 2))
-  expect_equal(getEnumKey(enum = myEnum, value = 2), c("Triangle", "Circle"))
-  expect_equal(getEnumKey(enum = myEnum, value = 1), c("Diamond"))
+  expect_equal(enumGetKey(enum = myEnum, value = 2), c("Triangle", "Circle"))
+  expect_equal(enumGetKey(enum = myEnum, value = 1), c("Diamond"))
 })
 
-test_that("getEnumKey returns NULL if the value is not present", {
+test_that("enumGetKey returns NULL if the value is not present", {
   myEnum <- enum(c(Diamond = 1, Triangle = 2, Circle = 2))
-  expect_null(getEnumKey(enum = myEnum, value = 3), c("Triangle", "Circle"))
+  expect_null(enumGetKey(enum = myEnum, value = 3), c("Triangle", "Circle"))
 })
 
 test_that("enumGetValue returns the correct value", {

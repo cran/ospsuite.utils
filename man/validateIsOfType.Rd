@@ -2,17 +2,16 @@
 % Please edit documentation in R/validation-helpers.R
 \name{validateIsOfType}
 \alias{validateIsOfType}
+\alias{validateIsCharacter}
 \alias{validateIsString}
 \alias{validateIsNumeric}
 \alias{validateIsInteger}
 \alias{validateIsLogical}
-\alias{validateIsSameLength}
-\alias{validateIsOfLength}
-\alias{validatePathIsAbsolute}
-\alias{validateIsIncluded}
 \title{Check if the provided object is of certain type. If not, stop with an error.}
 \usage{
 validateIsOfType(object, type, nullAllowed = FALSE)
+
+validateIsCharacter(object, nullAllowed = FALSE)
 
 validateIsString(object, nullAllowed = FALSE)
 
@@ -21,34 +20,16 @@ validateIsNumeric(object, nullAllowed = FALSE)
 validateIsInteger(object, nullAllowed = FALSE)
 
 validateIsLogical(object, nullAllowed = FALSE)
-
-validateIsSameLength(...)
-
-validateIsOfLength(object, nbElements)
-
-validatePathIsAbsolute(path)
-
-validateIsIncluded(values, parentValues, nullAllowed = FALSE)
 }
 \arguments{
-\item{object}{An object or a list of objects.}
+\item{object}{An object or an atomic vector or a list of objects.}
 
-\item{type}{String representation or Class of the type that should be checked
-for.}
+\item{type}{A single string or a vector of string representation or class of
+the type that should be checked for.}
 
 \item{nullAllowed}{Boolean flag if \code{NULL} is accepted for the \code{object}. If
 \code{TRUE}, \code{NULL} always returns \code{TRUE}, otherwise \code{NULL} returns \code{FALSE}.
 Default is \code{FALSE}.}
-
-\item{...}{Name of the variable in the calling function}
-
-\item{nbElements}{number of elements that are supposed in object}
-
-\item{path}{A valid file path name.}
-
-\item{values}{Vector of values}
-
-\item{parentValues}{Vector of values}
 }
 \value{
 \code{NULL} if the entered object is of expected type, otherwise produces
@@ -64,10 +45,10 @@ A <- data.frame(
   col2 = c(4, 5, 6),
   col3 = c(7, 8, 9)
 )
-validateIsSameLength(A, A)
-validateIsIncluded("col3", names(A))
+
+validateIsOfType(A, "data.frame")
 validateIsInteger(5)
 validateIsNumeric(1.2)
-validateIsString("x")
+validateIsCharacter("x")
 validateIsLogical(TRUE)
 }

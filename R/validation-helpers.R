@@ -1,4 +1,4 @@
-# validation helpers ---------------------------------------------
+# type validation helpers ---------------------------------------------
 
 #' Check if the provided object is of certain type. If not, stop with an error.
 #'
@@ -14,13 +14,14 @@
 #'   col2 = c(4, 5, 6),
 #'   col3 = c(7, 8, 9)
 #' )
-#' validateIsSameLength(A, A)
-#' validateIsIncluded("col3", names(A))
+#'
+#' validateIsOfType(A, "data.frame")
 #' validateIsInteger(5)
 #' validateIsNumeric(1.2)
-#' validateIsString("x")
+#' validateIsCharacter("x")
 #' validateIsLogical(TRUE)
 #' @export
+
 validateIsOfType <- function(object, type, nullAllowed = FALSE) {
   type <- c(type)
 
@@ -35,10 +36,11 @@ validateIsOfType <- function(object, type, nullAllowed = FALSE) {
 
   # Name of the variable in the calling function
   objectName <- deparse(substitute(object))
-  objectTypes <- typeNamesFrom(type)
+  objectTypes <- .typeNamesFrom(type)
 
   # There might be no call stack available if called from terminal
   callStack <- as.character(sys.call(-1)[[1]])
+
   # Object name is one frame further for functions such as ValidateIsNumeric
   if ((length(callStack) > 0) && grepl(pattern = "validateIs", x = callStack)) {
     objectName <- deparse(substitute(object, sys.frame(-1)))
@@ -51,9 +53,14 @@ validateIsOfType <- function(object, type, nullAllowed = FALSE) {
 #' @inheritParams isOfType
 #' @export
 
-validateIsString <- function(object, nullAllowed = FALSE) {
+validateIsCharacter <- function(object, nullAllowed = FALSE) {
   validateIsOfType(object, "character", nullAllowed)
 }
+
+#' @rdname validateIsOfType
+#' @export
+
+validateIsString <- validateIsCharacter
 
 #' @rdname validateIsOfType
 #' @inheritParams isOfType
@@ -76,6 +83,10 @@ validateIsNumeric <- function(object, nullAllowed = FALSE) {
 validateIsInteger <- function(object, nullAllowed = FALSE) {
   if (nullAllowed && is.null(object)) {
     return()
+  }
+
+  if (is.list(object)) {
+    object <- unlist(object)
   }
 
   # if it's an actual integer (e.g. 5L)
@@ -104,50 +115,65 @@ validateIsLogical <- function(object, nullAllowed = FALSE) {
   validateIsOfType(object, "logical", nullAllowed)
 }
 
+# Path validation helpers ---------------------------------------------
 
-#' @rdname validateIsOfType
-#' @param  ... Name of the variable in the calling function
-#' @export
-
-validateIsSameLength <- function(...) {
-  if (isSameLength(...)) {
-    return()
-  }
-  # Name of the variable in the calling function
-  objectName <- deparse(substitute(list(...)))
-
-  # Name of the arguments
-  argnames <- sys.call()
-  arguments <- paste(lapply(argnames[-1], as.character), collapse = ", ")
-
-  stop(messages$errorDifferentLength(arguments))
-}
-
-#' @rdname validateIsOfType
-#' @inheritParams isOfLength
-#' @export
-validateIsOfLength <- function(object, nbElements) {
-  if (isOfLength(object, nbElements)) {
-    return()
-  }
-  stop(messages$errorWrongLength(object, nbElements))
-}
-
-#' @rdname validateIsOfType
+#' Check if path is absolute
+#'
+#' @description
+#'
+#' Relative paths will be detected based on the presence of wildcard
+#' character(*) in the path specification.
+#'
+#' @return
+#'
+#' Error in case a relative path is found, otherwise no output will be returned.
+#'
 #' @param path A valid file path name.
+#'
+#' @examples
+#' # no error if path is absolute
+#' validatePathIsAbsolute("Organism|path")
+#'
+#' # error otherwise
+#' # validatePathIsAbsolute("Organism|*path")
+#'
 #' @export
 
 validatePathIsAbsolute <- function(path) {
   wildcardChar <- "*"
-  if (any(unlist(strsplit(path, ""), use.names = FALSE) == wildcardChar)) {
-    stop(messages$errorEntityPathNotAbsolute(path))
+
+  if (!any(unlist(strsplit(path, ""), use.names = FALSE) == wildcardChar)) {
+    return()
   }
+
+  stop(messages$errorEntityPathNotAbsolute(path))
 }
 
-#' @rdname validateIsOfType
+# Inclusion validation helpers ---------------------------------------------
+
+#' Check if values are included
+#'
 #' @inheritParams isIncluded
+#' @inheritParams validateEnumValue
+#'
+#' @examples
+#'
+#' A <- data.frame(
+#'   col1 = c(1, 2, 3),
+#'   col2 = c(4, 5, 6),
+#'   col3 = c(7, 8, 9)
+#' )
+#'
+#' # will return NULL if child value is included in parent value set
+#' validateIsIncluded("col3", names(A))
+#'
+#' @return
+#'
+#' Returns `NULL` if child value is included in parent value set, otherwise
+#' error is signaled.
 #'
 #' @export
+
 validateIsIncluded <- function(values, parentValues, nullAllowed = FALSE) {
   if (nullAllowed && is.null(values)) {
     return()
@@ -160,17 +186,20 @@ validateIsIncluded <- function(values, parentValues, nullAllowed = FALSE) {
   stop(messages$errorNotIncluded(values, parentValues))
 }
 
+# Enum validation helpers ---------------------------------------------
+
 #' Check if `value` is in the given `enum`. If not, stops with an error.
 #'
-#' @param enum `enum` where the `value` should be contained
-#' @param value `value` to search for in the `enum`
-#' @param nullAllowed If TRUE, `value` can be `NULL` and the test always passes.
-#' If `FALSE` (default), NULL is not accepted and the test fails.
+#' @param enum `enum` where the `value` should be contained.
+#' @param value A value to search for in the `enum`.
+#' @param nullAllowed If `TRUE`, `value` can be `NULL` and the test always
+#'   passes. If `FALSE` (default), `NULL` is not accepted and the test fails.
 #'
 #' @examples
 #' Symbol <- enum(c(Diamond = 1, Triangle = 2, Circle = 2))
 #' validateEnumValue(1, Symbol)
 #' @export
+
 validateEnumValue <- function(value, enum, nullAllowed = FALSE) {
   if (is.null(value)) {
     if (nullAllowed) {
@@ -179,10 +208,65 @@ validateEnumValue <- function(value, enum, nullAllowed = FALSE) {
     stop(messages$errorEnumValueUndefined(value))
   }
 
-  enumKey <- getEnumKey(enum, value)
+  enumKey <- enumGetKey(enum, value)
+
   if (any(names(enum) == enumKey)) {
     return()
   }
 
   stop(messages$errorValueNotInEnum(enum, value))
+}
+
+# Length validation helpers ---------------------------------------------
+
+#' Check if objects have expected length
+#'
+#' @rdname validateIsOfLength
+#' @inheritParams isOfLength
+#'
+#' @return
+#' If validations are successful, `NULL` is returned. Otherwise, error is
+#' signaled.
+#'
+#' @examples
+#' # returns `NULL` if of objects are of specified length
+#' validateIsOfLength(list(1, 2), 2L)
+#'
+#' # error otherwise
+#' # validateIsOfLength(c("3", "4"), 3L)
+#' @export
+
+validateIsOfLength <- function(object, nbElements) {
+  if (isOfLength(object, nbElements)) {
+    return()
+  }
+
+  stop(messages$errorWrongLength(object, nbElements))
+}
+
+
+#' Check if all objects are of same length
+#'
+#' @inheritParams isSameLength
+#'
+#' @inherit validateIsOfLength return return
+#'
+#' @examples
+#' # returns `NULL` if of objects are of same length
+#' validateIsSameLength(list(1, 2), c("3", "4"))
+#'
+#' # error otherwise
+#' # validateIsSameLength(list(1, 2), c("3", "4"), c(FALSE))
+#' @export
+
+validateIsSameLength <- function(...) {
+  if (isSameLength(...)) {
+    return()
+  }
+
+  # Name of the arguments
+  argnames <- sys.call()
+  arguments <- paste(lapply(argnames[-1], as.character), collapse = ", ")
+
+  stop(messages$errorDifferentLength(arguments))
 }

@@ -2,9 +2,9 @@
 
 #' Check if the provided object is of certain type
 #'
-#' @param object An object or a list of objects.
-#' @param type String representation or Class of the type that should be checked
-#'   for.
+#' @param object An object or an atomic vector or a list of objects.
+#' @param type A single string or a vector of string representation or class of
+#'   the type that should be checked for.
 #' @param nullAllowed Boolean flag if `NULL` is accepted for the `object`. If
 #'   `TRUE`, `NULL` always returns `TRUE`, otherwise `NULL` returns `FALSE`.
 #'   Default is `FALSE`.
@@ -13,15 +13,17 @@
 #'   type. Only the first level of the given list is considered.
 #'
 #' @examples
+#' # checking type of a single object
 #' df <- data.frame(x = c(1, 2, 3))
 #' isOfType(df, "data.frame")
 #' @export
+
 isOfType <- function(object, type, nullAllowed = FALSE) {
   if (is.null(object)) {
     return(nullAllowed)
   }
 
-  type <- typeNamesFrom(type)
+  type <- .typeNamesFrom(type)
 
   inheritType <- function(x) {
     if (is.null(x) && nullAllowed) {
@@ -38,37 +40,67 @@ isOfType <- function(object, type, nullAllowed = FALSE) {
   all(sapply(object, inheritType))
 }
 
-#' Check if input is included in a list
+#' Check if a vector of values is included in another vector of values
 #'
-#' @param values Vector of values
-#' @param parentValues Vector of values
+#' @param values A vector of values.
+#' @param parentValues A vector of values where `values` are checked for
+#'   inclusion.
 #'
-#' @return `TRUE` if the values are inside the parent values.
+#' @return
+#'
+#' Returns `TRUE` if the value or **all** `values` (if it's a vector) are
+#' present in the `parentValues`; `FALSE` otherwise.
+#'
 #' @examples
+#' # check if a column is present in dataframe
 #' A <- data.frame(
 #'   col1 = c(1, 2, 3),
 #'   col2 = c(4, 5, 6),
 #'   col3 = c(7, 8, 9)
 #' )
-#' isIncluded("col3", names(A))
+#' isIncluded("col3", names(A)) # TRUE
+#'
+#' # check if single element is present in a vector (atomic or non-atomic)
+#' isIncluded("x", list("w", "x", 1, 2)) # TRUE
+#' isIncluded("x", c("w", "a", "y")) # FALSE
+#'
+#' # check if **all** values (if it's a vector) are contained in parent values
+#' isIncluded(c("x", "y"), c("a", "y", "b", "x")) # TRUE
+#' isIncluded(list("x", 1), list("a", "b", "x", 1)) # TRUE
+#' isIncluded(c("x", "y"), c("a", "b", "x")) # FALSE
+#' isIncluded(list("x", 1), list("a", "b", "x")) # FALSE
 #' @export
 isIncluded <- function(values, parentValues) {
-  if (is.null(values)) {
+  values <- c(values)
+
+  hasObject <- any(mapply(function(x) {
+    is.object(x) | is.environment(x)
+  }, values))
+
+  if (hasObject) {
+    stop("Only vectors of base object types are allowed.", call. = FALSE)
+  }
+
+  if (is.null(values) || length(values) == 0) {
     return(FALSE)
   }
-  if (length(values) == 0) {
-    return(FALSE)
-  }
-  return(as.logical(min(values %in% parentValues)))
+
+  as.logical(min(values %in% parentValues))
 }
 
-#' Check if two objects are of same length
+#' Check if objects are of same length
 #' @param ... Objects to compare.
 #'
 #' @examples
-#' isSameLength(mtcars, ToothGrowth)
-#' isSameLength(mtcars, mtcars)
+#' # compare length of only 2 objects
+#' isSameLength(mtcars, ToothGrowth) # FALSE
+#' isSameLength(cars, BOD) # TRUE
+#'
+#' # or more number of objects
+#' isSameLength(c(1, 2), c(TRUE, FALSE), c("x", "y")) # TRUE
+#' isSameLength(list(1, 2), list(TRUE, FALSE), list("x")) # FALSE
 #' @export
+
 isSameLength <- function(...) {
   args <- list(...)
   nrOfLengths <- length(unique(lengths(args)))
@@ -89,6 +121,7 @@ isSameLength <- function(...) {
 #' isOfLength(df, 1)
 #' isOfLength(df, 3)
 #' @export
+
 isOfLength <- function(object, nbElements) {
   return(length(object) == nbElements)
 }
@@ -101,50 +134,62 @@ isOfLength <- function(object, nbElements) {
 #' @return `TRUE` if the path includes the extension.
 #'
 #' @examples
+#' # TRUE
 #' isFileExtension("enum.R", "R")
+#'
+#' # FALSE
 #' isFileExtension("enum.R", "pkml")
 #' @export
 
 isFileExtension <- function(file, extension) {
   extension <- c(extension)
-  file_ext <- fileExtension(file)
+  file_ext <- .fileExtension(file)
   file_ext %in% extension
 }
 
-#' Remove duplicate values from data
+#' Check that an array of values does not include any duplicate
 #'
-#' @param data A dataframe.
-#' @param na.rm Logical to decide if missing values should be removed.
+#' @param values An array of values
+#' @param na.rm Logical to decide if missing values should be removed from the duplicate checking.
+#' Note that duplicate `NA` values are flagged if `na.rm=FALSE`.
 #'
-#' @return Logical denoting if there are only unique values in data.
+#' @return Logical assessing if all values are unique
 #'
 #' @examples
-#' hasUniqueValues(c("x", NA, "y", "x"))
-#' hasUniqueValues(c("x", NA, "y"))
+#' hasOnlyDistinctValues(c("x", "y"))
+#' hasOnlyDistinctValues(c("x", "y", "x"))
+#' hasOnlyDistinctValues(c("x", NA, "y", NA), na.rm = FALSE)
+#' hasOnlyDistinctValues(c("x", NA, "y", NA), na.rm = TRUE)
 #' @export
 
-hasUniqueValues <- function(data, na.rm = TRUE) {
+hasOnlyDistinctValues <- function(values, na.rm = TRUE) {
   if (na.rm) {
-    data <- data[!is.na(data)]
+    values <- values[!is.na(values)]
   }
 
-  return(!any(duplicated(data)))
+  return(!any(duplicated(values)))
 }
 
+#' @rdname hasOnlyDistinctValues
+#' @export
 
-# utilities ---------------------------------------------
+hasUniqueValues <- hasOnlyDistinctValues
 
-typeNamesFrom <- function(type) {
+#' @keywords internal
+.typeNamesFrom <- function(type) {
   type <- c(type)
+
   sapply(type, function(t) {
     if (is.character(t)) {
       return(t)
     }
-    t$classname
+
+    return(t$classname)
   })
 }
 
-fileExtension <- function(file) {
+#' @keywords internal
+.fileExtension <- function(file) {
   ex <- strsplit(basename(file), split = "\\.")[[1]]
   return(utils::tail(ex, 1))
 }
