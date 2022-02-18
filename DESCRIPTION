@@ -1,7 +1,7 @@
 Type: Package
 Package: ospsuite.utils
 Title: Utility Functions for Open Systems Pharmacology R Packages
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: c(
     person("Open-Systems-Pharmacology Community", role = c("cph", "fnd")),
     person("Michael", "Sevestre", , "michael@design2code.ca", role = "aut"),
@@ -26,8 +26,11 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US
 RoxygenNote: 7.1.2
+Collate: 'enum.R' 'error-checks.R' 'formatNumerics.R' 'messages.R'
+        'utilities.R' 'ospsuite.utils-env.R' 'printable.R'
+        'validation-helpers.R'
 NeedsCompilation: no
-Packaged: 2022-02-09 14:21:38 UTC; IndrajeetPatil
+Packaged: 2022-02-18 12:58:11 UTC; IndrajeetPatil
 Author: Open-Systems-Pharmacology Community [cph, fnd],
   Michael Sevestre [aut],
   Pavel Balazki [aut],
@@ -35,4 +38,4 @@ Author: Open-Systems-Pharmacology Community [cph, fnd],
   Indrajeet Patil [aut, cre] (<https://orcid.org/0000-0003-1995-6531>,
     @patilindrajeets)
 Repository: CRAN
-Date/Publication: 2022-02-09 14:30:02 UTC
+Date/Publication: 2022-02-18 13:10:02 UTC
